@@ -1,0 +1,11 @@
+{{pad1.DATA}}
+{{pad2.DATA}}
+📍{{loc.DATA}}
+☁️ {{weather.DATA}} · 💧 {{rain.DATA}}
+🌡 {{min_temperature.DATA}}～{{max_temperature.DATA}}
+🌅 {{sun.DATA}}
+🧥 {{tip.DATA}}
+📖 {{quote.DATA}}
+🍃 {{vibe.DATA}}
+{{pad3.DATA}}
+{{pad4.DATA}}
