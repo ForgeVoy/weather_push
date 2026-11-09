@@ -184,40 +184,41 @@ python check_template_assign.py --lp
 2. **在 GitHub 配置 Secrets**  
    打开仓库 → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**：
 
-   | Secret 名称 | 何时需要 | 说明 |
-   |-------------|----------|------|
-   | `WECHAT_APP_ID` | 定时 / 测试号推送 | 测试号 appID |
-   | `WECHAT_APP_SECRET` | 同上 | 测试号 appsecret |
-   | `SCT_SENDKEY` | 仅手动选 Server 酱 | 方糖 SendKey |
+   | Secret 名称         | 何时需要           | 说明             |
+   | ------------------- | ------------------ | ---------------- |
+   | `WECHAT_APP_ID`     | 定时 / 测试号推送  | 测试号 appID     |
+   | `WECHAT_APP_SECRET` | 同上               | 测试号 appsecret |
+   | `SCT_SENDKEY`       | 仅手动选 Server 酱 | 方糖 SendKey     |
 
    可选 **Variables**（非敏感，仅 Server 酱手动推送时用）：`WEATHER_CITY`、`WEATHER_LAT`、`WEATHER_LON`。
 
 3. **确认默认分支**  
    定时任务 **只会在默认分支**（`main` 或 `master`）上跑；工作流文件必须已合并进该分支。
 
-4. **验证**  
-   - 打开 **Actions** → 左侧 **Daily Weather Push** → **Run workflow**  
-   - 选 `mode: mp`，可先勾 `dry_run` 看日志是否组装成功  
+4. **验证**
+   - 打开 **Actions** → 左侧 **Daily Weather Push** → **Run workflow**
+   - 选 `mode: mp`，可先勾 `dry_run` 看日志是否组装成功
    - 再取消 `dry_run` 真发一条
 
 5. **定时规则**  
-   工作流里默认 `cron: "0 23 * * *"` = **北京时间每天 07:00**（GitHub 用 UTC，需自己换算）。  
-   改时间请编辑 YML 里 `schedule` 段，例如北京时间 08:00 → `0 0 * * *`。
+   工作流里默认 `cron: "0 0 * * *"` = **北京时间每天 08:00**（GitHub 用 UTC，需自己换算）。  
+   例如北京时间 08:00 → `0 0 * * *`。
+   改时间请编辑 YML 里 `schedule` 段。
 
 ### 行为说明
 
-| 触发方式 | 运行的脚本 |
-|----------|------------|
-| ⏰ `schedule` 定时 | `weather_push_mp.py`（测试号多用户） |
-| ▶️ 手动 `workflow_dispatch` + `mp` | 同上；可勾选仅预览 `--dry-run` |
-| ▶️ 手动 + `sct` | `weather_push.py`（需 `SCT_SENDKEY`） |
+| 触发方式                           | 运行的脚本                            |
+| ---------------------------------- | ------------------------------------- |
+| ⏰ `schedule` 定时                 | `weather_push_mp.py`（测试号多用户）  |
+| ▶️ 手动 `workflow_dispatch` + `mp` | 同上；可勾选仅预览 `--dry-run`        |
+| ▶️ 手动 + `sct`                    | `weather_push.py`（需 `SCT_SENDKEY`） |
 
 脚本会优先读环境变量：`WECHAT_APP_*`、`SCT_SENDKEY` 等；未设置时仍用你本地写在 `.py` 里的默认值（本地跑不变）。
 
 ### 注意
 
-- 🕐 免费版 Actions 的定时任务可能 **晚几分钟**，高峰期偶发跳过。  
-- 🌐 Runner 在国外，访问 Open-Meteo / 微信 API 一般可用；若失败看 Actions 日志里的 HTTP 错误。  
+- 🕐 免费版 Actions 的定时任务可能 **晚几分钟**，高峰期偶发跳过。
+- 🌐 Runner 在国外，访问 Open-Meteo / 微信 API 一般可用；若失败看 Actions 日志里的 HTTP 错误。
 - 🔒 **不要把** `APP_SECRET`、SendKey 写进 YML；只放在 Secrets 里。
 
 ---
