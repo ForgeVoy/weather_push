@@ -11,15 +11,16 @@
 """
 
 import json
+import os
 import urllib.request
 import urllib.parse
 
-# ====== 配置区 ======
-SENDKEY = "SCTxxxxxxxxxxxx"  # 你的 Server酱 SendKey
-CITY = "北京"
-LAT = 39.9042          # 纬度
-LON = 116.4074         # 经度
-# ====================
+# ====== 配置区（GitHub Actions 可用环境变量覆盖）======
+SENDKEY = os.environ.get("SCT_SENDKEY", "SCTxxxxxxxxxxxx")
+CITY = os.environ.get("WEATHER_CITY", "北京")
+LAT = float(os.environ.get("WEATHER_LAT", "39.9042"))
+LON = float(os.environ.get("WEATHER_LON", "116.4074"))
+# ======================================================
 
 
 # Open-Meteo 天气代码 → 中文描述

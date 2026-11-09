@@ -22,9 +22,9 @@ import sys
 import urllib.request
 import urllib.parse
 
-# ====== 配置区 ======
-APP_ID = "wx6d44cdf506132a3c"
-APP_SECRET = "9f82a3e07506a9f087f9352b953eedcd"
+# ====== 配置区（GitHub Actions 可用 WECHAT_APP_ID / WECHAT_APP_SECRET 覆盖）======
+APP_ID = os.environ.get("WECHAT_APP_ID", "wx6d44cdf506132a3c")
+APP_SECRET = os.environ.get("WECHAT_APP_SECRET", "9f82a3e07506a9f087f9352b953eedcd")
 Lp_template_id = "VdjJcZfBaLPK2m_NbAvQaKU7Z5mcuUdfdIRQaoCRpR0"
 Other_template_id = "_4n3Elc36NwOuBK0lMOEjDp-7rx-4tzmBlpk4H3nuhs"
 # style: romantic | friend

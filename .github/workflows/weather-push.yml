@@ -1,0 +1,67 @@
+# 每日天气推送 — GitHub Actions
+# 文档见 README「GitHub Actions 自动运行」
+name: Daily Weather Push
+
+on:
+  # 定时：cron 使用 UTC。下方为北京时间每天 07:00（UTC 前一天 23:00）
+  schedule:
+    - cron: "0 23 * * *"
+  # 在 GitHub 网页 Actions 页可手动点 Run workflow
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "推送方式"
+        required: true
+        default: mp
+        type: choice
+        options:
+          - mp
+          - sct
+      dry_run:
+        description: "仅预览不发送（仅 mp 模式）"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    # 定时任务只会在仓库默认分支上执行（一般为 main / master）
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Push via 测试号 (weather_push_mp.py)
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'mp')
+        env:
+          WECHAT_APP_ID: ${{ secrets.WECHAT_APP_ID }}
+          WECHAT_APP_SECRET: ${{ secrets.WECHAT_APP_SECRET }}
+        run: |
+          if [ -z "$WECHAT_APP_ID" ] || [ -z "$WECHAT_APP_SECRET" ]; then
+            echo "::error::请在仓库 Settings → Secrets and variables → Actions 中配置 WECHAT_APP_ID 与 WECHAT_APP_SECRET"
+            exit 1
+          fi
+          ARGS=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry_run }}" = "true" ]; then
+            ARGS="--dry-run"
+          fi
+          python weather_push_mp.py $ARGS
+
+      - name: Push via Server酱 (weather_push.py)
+        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'sct'
+        env:
+          SCT_SENDKEY: ${{ secrets.SCT_SENDKEY }}
+          WEATHER_CITY: ${{ vars.WEATHER_CITY }}
+          WEATHER_LAT: ${{ vars.WEATHER_LAT }}
+          WEATHER_LON: ${{ vars.WEATHER_LON }}
+        run: |
+          if [ -z "$SCT_SENDKEY" ]; then
+            echo "::error::请配置 Secret：SCT_SENDKEY"
+            exit 1
+          fi
+          python weather_push.py
