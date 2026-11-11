@@ -88,6 +88,15 @@ USERS = [
         "lat": 39.638741,
         "lon": 118.048185,
     },
+    {
+        "name": "晶晶",
+        "openid": "owhzL58PqNb6xecGtKQDGOuQNWZ0",
+        "template_id": Other_template_id,
+        "style": "friend",
+        "city": "邯郸市丛台区",
+        "lat": 36.630249,
+        "lon": 114.493744,
+    },
 ]
 # ====================
 

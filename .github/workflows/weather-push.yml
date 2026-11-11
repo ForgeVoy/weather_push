@@ -3,9 +3,10 @@
 name: Daily Weather Push
 
 on:
-  # 定时：cron 使用 UTC。下方为北京时间每天 08:00（UTC 当天 00:00）
+  # 定时：按 IANA 时区写本地时间，避免 UTC 手算成 13:00 等偏差（勿写 0 5 * * * 以为是 8 点）
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "0 8 * * *"
+      timezone: "Asia/Shanghai"
   # 在 GitHub 网页 Actions 页可手动点 Run workflow
   workflow_dispatch:
     inputs:

@@ -201,8 +201,7 @@ python check_template_assign.py --lp
    - 再取消 `dry_run` 真发一条
 
 5. **定时规则**  
-   工作流里默认 `cron: "0 0 * * *"` = **北京时间每天 08:00**（GitHub 用 UTC，需自己换算）。  
-   例如北京时间 08:00 → `0 0 * * *`。
+   工作流默认在 **北京时间每天 08:00** 触发，使用 `cron: "0 8 * * *"` + `timezone: "Asia/Shanghai"`（勿再用 UTC 手算，易写成 `0 5 * * *` 从而在下午 13 点左右误跑）。  
    改时间请编辑 YML 里 `schedule` 段。
 
 ### 行为说明
