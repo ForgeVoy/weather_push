@@ -97,6 +97,15 @@ USERS = [
         "lat": 36.630249,
         "lon": 114.493744,
     },
+    {
+        "name": "博初",
+        "openid": "owhzL5zfvIedeK8TjXrtIo-1Wyf4",
+        "template_id": Other_template_id,
+        "style": "friend",
+        "city": "邯郸市永年区",
+        "lat": 36.740494,
+        "lon": 114.633108,
+    },
 ]
 # ====================
 
