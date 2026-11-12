@@ -27,6 +27,8 @@ on:
 jobs:
   push:
     runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Shanghai
     # 定时任务只会在仓库默认分支上执行（一般为 main / master）
     steps:
       - name: Checkout
