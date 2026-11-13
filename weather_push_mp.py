@@ -19,12 +19,26 @@ import json
 import os
 import re
 import sys
+import time
+import urllib.error
 import urllib.request
 import urllib.parse
 
-# ====== 配置区（GitHub Actions 可用 WECHAT_APP_ID / WECHAT_APP_SECRET 覆盖）======
-APP_ID = os.environ.get("WECHAT_APP_ID", "wx6d44cdf506132a3c")
-APP_SECRET = os.environ.get("WECHAT_APP_SECRET", "9f82a3e07506a9f087f9352b953eedcd")
+# 国内网络访问 Open-Meteo 常超时；auto=先 Open-Meteo，失败再用 wttr.in
+WEATHER_PROVIDER = os.environ.get("WEATHER_PROVIDER", "auto").strip().lower()
+
+# ====== 配置区 ======
+# 本地：直接改下面常量，无需设置环境变量
+# GitHub Actions：在 Secrets 中配置 WECHAT_APP_ID / WECHAT_APP_SECRET 覆盖
+WECHAT_APP_ID = "wx6d44cdf506132a3c"
+WECHAT_APP_SECRET = "9f82a3e07506a9f087f9352b953eedcd"
+
+if os.environ.get("GITHUB_ACTIONS") == "true":
+    APP_ID = os.environ.get("WECHAT_APP_ID") or WECHAT_APP_ID
+    APP_SECRET = os.environ.get("WECHAT_APP_SECRET") or WECHAT_APP_SECRET
+else:
+    APP_ID = WECHAT_APP_ID
+    APP_SECRET = WECHAT_APP_SECRET
 Lp_template_id = "VdjJcZfBaLPK2m_NbAvQaKU7Z5mcuUdfdIRQaoCRpR0"
 Other_template_id = "_4n3Elc36NwOuBK0lMOEjDp-7rx-4tzmBlpk4H3nuhs"
 # style: romantic | friend
@@ -79,32 +93,14 @@ USERS = [
         "lat": 39.096257,
         "lon": 117.152432,
     },
-     {
-        "name": "明正",
-        "openid": "owhzL57J73tRIl-pitYhcNb7IZiM",
-        "template_id": Other_template_id,
-        "style": "friend",
-        "city": "唐山市路北区",
-        "lat": 39.638741,
-        "lon": 118.048185,
-    },
     {
         "name": "晶晶",
-        "openid": "owhzL58PqNb6xecGtKQDGOuQNWZ0",
+        "openid": "owhzL501Fyc8ARkAR4tPXiU2nY-E",
         "template_id": Other_template_id,
         "style": "friend",
         "city": "邯郸市丛台区",
         "lat": 36.630249,
         "lon": 114.493744,
-    },
-    {
-        "name": "博初",
-        "openid": "owhzL5zfvIedeK8TjXrtIo-1Wyf4",
-        "template_id": Other_template_id,
-        "style": "friend",
-        "city": "邯郸市永年区",
-        "lat": 36.740494,
-        "lon": 114.633108,
     },
 ]
 # ====================
@@ -334,18 +330,99 @@ VIBE_COLD = [
 ]
 
 
-def http_json(url, data=None):
+def http_json(url, data=None, *, timeout=30, retries=3):
     if data is not None:
         payload = json.dumps(data, ensure_ascii=False).encode("utf-8")
         req = urllib.request.Request(url, data=payload,
                                      headers={"Content-Type": "application/json"})
     else:
         req = urllib.request.Request(url, headers={"User-Agent": "weather-push/1.0"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+
+    last_err = None
+    for attempt in range(retries):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except (urllib.error.URLError, TimeoutError, OSError) as e:
+            last_err = e
+            if attempt + 1 < retries:
+                time.sleep(min(2 ** attempt, 8))
+    raise last_err
 
 
-def get_weather(lat, lon):
+# wttr 使用 World Weather Online 代码，映射到 Open-Meteo 同款 WMO 码
+_WWO_TO_WMO = {
+    113: 0, 116: 2, 119: 3, 122: 3,
+    143: 45, 248: 45, 260: 48,
+    176: 61, 263: 51, 266: 51, 281: 56, 284: 57,
+    293: 61, 296: 61, 299: 63, 302: 65, 305: 65, 308: 65,
+    311: 66, 314: 67, 317: 77, 320: 77,
+    323: 71, 326: 71, 329: 73, 332: 73, 335: 75, 338: 75,
+    350: 77, 353: 80, 356: 81, 359: 82,
+    362: 77, 365: 77, 368: 85, 371: 86,
+    386: 95, 389: 96, 392: 86, 395: 86,
+    200: 95, 227: 77, 230: 75,
+}
+
+
+def _wwo_to_wmo(code, desc=""):
+    try:
+        code = int(code)
+    except (TypeError, ValueError):
+        code = None
+    if code in _WWO_TO_WMO:
+        return _WWO_TO_WMO[code]
+    text = (desc or "").lower()
+    if "thunder" in text:
+        return 95
+    if "snow" in text:
+        return 71
+    if "rain" in text or "drizzle" in text or "shower" in text:
+        return 61
+    if "fog" in text or "mist" in text:
+        return 45
+    if "cloud" in text or "overcast" in text:
+        return 3
+    if "clear" in text or "sunny" in text:
+        return 0
+    return 3
+
+
+def _wttr_weather_desc(hourly):
+    desc = hourly.get("weatherDesc") or []
+    if desc and isinstance(desc[0], dict):
+        return desc[0].get("value", "")
+    return ""
+
+
+def _wttr_day_stats(day):
+    hourly = day.get("hourly") or []
+    if not hourly:
+        raise ValueError("wttr 返回缺少 hourly")
+    temps = [int(h["tempC"]) for h in hourly]
+    codes = [_wwo_to_wmo(h.get("weatherCode"), _wttr_weather_desc(h)) for h in hourly]
+    rains = [int(h.get("chanceofrain") or 0) for h in hourly]
+    uvs = [int(h.get("uvIndex") or 0) for h in hourly]
+    mid = hourly[len(hourly) // 2]
+    return {
+        "code": _wwo_to_wmo(mid.get("weatherCode"), _wttr_weather_desc(mid)),
+        "codes_fallback": codes,
+        "hi": max(temps),
+        "lo": min(temps),
+        "pp": max(rains) if rains else 0,
+        "uv": max(uvs) if uvs else 0,
+    }
+
+
+def _wttr_sun_iso(date_str, time_12h):
+    """ astronomy 里如 '06:52 AM' → ISO 本地时间 """
+    t = datetime.datetime.strptime(
+        f"{date_str} {time_12h.strip()}", "%Y-%m-%d %I:%M %p"
+    )
+    return t.isoformat(timespec="minutes")
+
+
+def get_weather_open_meteo(lat, lon, *, fast=False):
     params = {
         "latitude": lat,
         "longitude": lon,
@@ -356,7 +433,61 @@ def get_weather(lat, lon):
         "forecast_days": 2,
     }
     url = "https://api.open-meteo.com/v1/forecast?" + urllib.parse.urlencode(params)
-    return http_json(url)
+    if fast:
+        return http_json(url, timeout=10, retries=1)
+    return http_json(url, timeout=20, retries=2)
+
+
+def get_weather_wttr(lat, lon):
+    url = f"https://wttr.in/{lat},{lon}?format=j1"
+    raw = http_json(url, timeout=25, retries=3)
+    days = raw.get("weather") or []
+    if len(days) < 2:
+        raise RuntimeError("wttr 预报天数不足")
+    cur = (raw.get("current_condition") or [{}])[0]
+    stats = [_wttr_day_stats(d) for d in days[:2]]
+
+    def sun_field(idx, key):
+        astro = (days[idx].get("astronomy") or [{}])[0]
+        return _wttr_sun_iso(days[idx]["date"], astro[key])
+
+    now = datetime.datetime.now().replace(second=0, microsecond=0)
+    return {
+        "current": {
+            "time": now.isoformat(timespec="minutes"),
+            "temperature_2m": float(cur.get("temp_C", 0)),
+            "relative_humidity_2m": int(cur.get("humidity") or 0),
+            "weather_code": _wwo_to_wmo(
+                cur.get("weatherCode"),
+                (cur.get("weatherDesc") or [{}])[0].get("value", ""),
+            ),
+            "wind_speed_10m": float(cur.get("windspeedKmph") or 0),
+        },
+        "daily": {
+            "time": [days[0]["date"], days[1]["date"]],
+            "weather_code": [s["code"] for s in stats],
+            "temperature_2m_max": [s["hi"] for s in stats],
+            "temperature_2m_min": [s["lo"] for s in stats],
+            "precipitation_probability_max": [s["pp"] for s in stats],
+            "uv_index_max": [s["uv"] for s in stats],
+            "sunrise": [sun_field(0, "sunrise"), sun_field(1, "sunrise")],
+            "sunset": [sun_field(0, "sunset"), sun_field(1, "sunset")],
+        },
+    }
+
+
+def get_weather(lat, lon):
+    if WEATHER_PROVIDER == "wttr":
+        return get_weather_wttr(lat, lon)
+
+    if WEATHER_PROVIDER == "open-meteo":
+        return get_weather_open_meteo(lat, lon)
+
+    try:
+        return get_weather_open_meteo(lat, lon, fast=True)
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
+        print(f"⚠️ Open-Meteo 不可用（{e}），改用 wttr.in …", file=sys.stderr)
+        return get_weather_wttr(lat, lon)
 
 
 def wdesc(code):
@@ -904,9 +1035,13 @@ def dry_run():
     weather_cache = {}
     for user in USERS:
         key = (user["lat"], user["lon"])
-        if key not in weather_cache:
-            weather_cache[key] = get_weather(user["lat"], user["lon"])
-        data = build_template_data(weather_cache[key], user)
+        try:
+            if key not in weather_cache:
+                weather_cache[key] = get_weather(user["lat"], user["lon"])
+            data = build_template_data(weather_cache[key], user)
+        except Exception as e:
+            print(f"❌ {user['name']}（{user['city']}）获取天气失败：{e}")
+            continue
         print(f"\n===== {user['name']}｜{user.get('style')}｜{user['city']} =====")
         print(f"字段合计：{content_chars(data)} 字")
         if user.get("style", "friend") == "friend":
