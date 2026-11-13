@@ -784,11 +784,15 @@ def build_template_data(d, user):
 # 公众号模板消息（测试号实测）：
 # - 正文首尾约裁 WECHAT_STRIP_LINES 行，用 pad1..pad4 占位（上下各 2 行）；
 # - loc / 旁白并入 vibe；单字段 ≤20 字，总长约 ≤200 字。
+# - 避免 Android 对 📍💧 显示异常；与模板内 🌅📖 等同批常见 emoji
+WX_ICON_LOC = "🏙️"
+WX_ICON_RAIN = "☔"
+
 FRIEND_TEMPLATE_RENDER = (
     "{pad1}\n"
     "{pad2}\n"
-    "📍{loc}\n"
-    "☁️ {weather} · 💧 {rain}\n"
+    f"{WX_ICON_LOC}{{loc}}\n"
+    f"☁️ {{weather}} · {WX_ICON_RAIN} {{rain}}\n"
     "🌡 {min_temperature}～{max_temperature}\n"
     "🌅 {sun}\n"
     "🧥 {tip}\n"
@@ -801,8 +805,8 @@ FRIEND_TEMPLATE_RENDER = (
 FRIEND_TEMPLATE_WX = (
     "{{pad1.DATA}}\n"
     "{{pad2.DATA}}\n"
-    "📍{{loc.DATA}}\n"
-    "☁️ {{weather.DATA}} · 💧 {{rain.DATA}}\n"
+    f"{WX_ICON_LOC}{{{{loc.DATA}}}}\n"
+    f"☁️ {{{{weather.DATA}}}} · {WX_ICON_RAIN} {{{{rain.DATA}}}}\n"
     "🌡 {{min_temperature.DATA}}～{{max_temperature.DATA}}\n"
     "🌅 {{sun.DATA}}\n"
     "🧥 {{tip.DATA}}\n"
@@ -829,7 +833,7 @@ def write_friend_template_file():
 ROMANTIC_TEMPLATE_RENDER = (
     "{pad1}\n"
     "{pad2}\n"
-    "📍{loc}\n"
+    f"{WX_ICON_LOC}{{loc}}\n"
     "☁️ {weather}\n"
     "🌡 {min_temperature}～{max_temperature}\n"
     "💕 {heart}\n"
@@ -842,7 +846,7 @@ ROMANTIC_TEMPLATE_RENDER = (
 LP_TEMPLATE_WX = (
     "{{pad1.DATA}}\n"
     "{{pad2.DATA}}\n"
-    "📍{{loc.DATA}}\n"
+    f"{WX_ICON_LOC}{{{{loc.DATA}}}}\n"
     "☁️ {{weather.DATA}}\n"
     "🌡 {{min_temperature.DATA}}～{{max_temperature.DATA}}\n"
     "💕 {{heart.DATA}}\n"

@@ -1,6 +1,6 @@
 {{pad1.DATA}}
 {{pad2.DATA}}
-📍{{loc.DATA}}
+🏙️{{loc.DATA}}
 ☁️ {{weather.DATA}}
 🌡 {{min_temperature.DATA}}～{{max_temperature.DATA}}
 💕 {{heart.DATA}}
