@@ -76,6 +76,15 @@ USERS = [
         "lon": 117.152432,
     },
     {
+        "name": "小乔",
+        "openid": "owhzL50-Mi06fZpnyvzrR_Vj4fBo",
+        "template_id": Other_template_id,
+        "style": "friend",
+        "city": "天津市南开区",
+        "lat": 39.096257,
+        "lon": 117.152432,
+    },
+    {
         "name": "田昊",
         "openid": "owhzL572xPdo3qdAAoSNojJcdRSM",
         "template_id": Other_template_id,
